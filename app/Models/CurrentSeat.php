@@ -7,5 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class CurrentSeat extends Model
 {
     protected $table = 'current_seats';
-    protected $fillable = ['seat_name', 'employee_name', 'assigned_date',];
+    protected $primaryKey = 'current_id';
+    protected $fillable = ['seat_id', 'employee_id', 'assigned_date',];
 }

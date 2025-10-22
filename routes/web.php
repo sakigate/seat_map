@@ -7,4 +7,5 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Volt::route('/seat_chart/seat_chart', 'seat_chart.seat_chart')->name('seat_chart.seat_chart');
+
+Volt::route('/seat_map', 'seat_map.seat_map')->name('seats.index');
