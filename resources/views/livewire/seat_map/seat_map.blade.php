@@ -9,6 +9,7 @@ state([
     'seats' => [], // オフィス＋座席+現在の着席者
     'selectedEmpId' => null, // 左で選んだ自分の社員ID
     'employeeQuery' => '', // 社員検索キーワード
+    'selectedDeptId' => null, // 選択した部署ID
 ]);
 
 mount(function () {
@@ -108,14 +109,26 @@ $clearSelectedEmployee = function () {
     <div class="flex gap-6" wire:poll.5s="refreshSeats">
         <!-- 左：社員選択 -->
         <div class="w-50 space-y-3 m-5">
-            <h3 class="font-semibold">自分の名前を選択</h3>
+            <h3 class="font-semibold">部署と自分の名前を選択</h3>
 
+            <!-- 部署選択 -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">部署</label>
+                <select wire:model="selectedDeptId" class="w-full border rounded p-2">
+                    <option value="">-- 部署を選択 --</option>
+                    @foreach (\App\Models\Department::orderBy('department_name')->get() as $dept)
+                        <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- 社員検索 -->
             <input type="text" placeholder="氏名で検索" wire:model.debounce.300ms="employeeQuery"
                 class="w-full border rounded p-2" />
-
+            <!-- 社員名選択 -->
             <select wire:model="selectedEmpId" class="w-full border rounded p-2">
-                <option value="">-- 選択してください --</option>
-                @foreach (\App\Models\Employee::query()->when($employeeQuery, fn($q) => $q->where('employee_name', 'like', "%{$employeeQuery}%"))->orderBy('employee_name')->limit(100)->get() as $emp)
+                <option value="">-- 名前を選択 --</option>
+                @foreach (\App\Models\Employee::query()->when($selectedDeptId, fn($q) => $q->where('department_id', $selectedDeptId))->when($employeeQuery, fn($q) => $q->where('employee_name', 'like', "%{$employeeQuery}%"))->orderBy('employee_name')->limit(100)->get() as $emp)
                     <option value="{{ $emp->employee_id }}">{{ $emp->employee_name }}</option>
                 @endforeach
             </select>
