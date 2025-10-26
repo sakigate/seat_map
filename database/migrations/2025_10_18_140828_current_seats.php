@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('current_seats', function (Blueprint $table) {
             $table->increments('current_id');
+            $table->integer('office_id')->constrained('offices');
             $table->integer('seat_id')->constrained('seats');
             $table->integer('employee_id')->nullable()->constrained('employees')->nullOnDelete();
             $table->timestamp('assigned_date'); //利用日
-            $table->unique('seat_id');      // 1つの席に2人は不可
-            $table->unique('employee_id');  // 1人が同時に2席は不可
+            $table->unique('seat_id'); // 1つの席に2人は不可
+            $table->unique('employee_id'); // 1人が同時に2席は不可
             $table->timestamps();
         });
     }
