@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('offices', function (Blueprint $table) {
             $table->increments("office_id");
             $table->string("office_name");
+            $table->integer("layout_width")->default(4);
+            $table->integer("layout_height")->default(0);
         });
     }
 

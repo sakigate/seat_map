@@ -20,7 +20,17 @@ mount(function () {
 $refreshSeats = function () {
     // seats を土台に current_seats / employees を LEFT JOIN（空席も出す）
     $this->seats = Seat::query()
-        ->select(['seats.seat_id', 'seats.seat_name', 'seats.office_id', 'e.employee_id as occ_employee_id', 'e.employee_name as occ_employee_name'])
+        ->select([
+            'seats.seat_id',
+            'seats.seat_name',
+            'seats.office_id',
+            'seats.x_position',
+            'seats.y_position',
+            'seats.width',
+            'seats.height',
+            'e.employee_id as occ_employee_id',
+            'e.employee_name as occ_employee_name'
+        ])
         ->leftJoin('current_seats as cs', 'cs.seat_id', '=', 'seats.seat_id')
         ->leftJoin('employees as e', 'e.employee_id', '=', 'cs.employee_id')
         ->leftJoin('offices as o', 'o.office_id', '=', 'cs.office_id')
@@ -157,7 +167,13 @@ $clearSelectedEmployee = function () {
 
         <!-- 中：座席グリッド -->
         <div class="border rounded p-3 sm:p-4 m-5">
-            <div class="grid grid-cols-4 gap-2 sm:gap-3">
+            @php
+                $office = \App\Models\Office::find($officeId);
+                $gridwidth = $office->layout_width ?? 4;
+                $gridheight = $office->layout_height > 0 ? $office->layout_height : ceil(count($seats) / $gridwidth);
+            @endphp
+
+            <div class="relative" style="width: {{ $gridwidth * 100 }}px; height: {{ $gridheight * 80 }}px;">
                 @foreach ($seats as $s)
                     @php
                         $occId = $s['occ_employee_id'] ?? null;
@@ -165,15 +181,21 @@ $clearSelectedEmployee = function () {
                         $disabled = !$selectedEmpId || ($occId && (int) $occId !== (int) $selectedEmpId);
                         $isMine = $occId && (int) $occId === (int) $selectedEmpId;
                         $bgClass = $isMine ? 'bg-blue-500' : ($occId ? 'bg-red-500' : 'bg-gray-400');
+
+                        $xPosition = $s['x_position'] ?? 0;
+                        $yPosition = $s['y_position'] ?? 0;
+                        $width = $s['width'] ?? 1;
+                        $height = $s['height'] ?? 1;
                     @endphp
 
                     <button wire:key="seat-{{ $officeId }}-{{ $s['seat_id'] }}"
                         wire:click="claimSeat({{ $s['seat_id'] }})" @disabled($disabled)
                         class="rounded text-white {{ $bgClass }}
                             flex flex-col items-center justify-center
-                            w-full aspect-[3/2]
+                            absolute
                             px-2 py-1.5
                             text-xs sm:text-sm leading-tight"
+                        style="left: {{ $xPosition * 100 }}px; top: {{ $yPosition * 80 }}px; width: {{ $width * 100 - 8 }}px; height: {{ $height * 80 - 8 }}px;"
                         title="{{ $occId ? '使用中: ' . ($occName ?? '') : '空席' }}">
                         <div class="font-semibold text-[11px] sm:text-xs">{{ $s['seat_name'] }}</div>
                         @if ($occId)

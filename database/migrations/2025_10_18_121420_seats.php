@@ -14,8 +14,13 @@ return new class extends Migration
         Schema::create('seats', function (Blueprint $table) {
             $table->increments("seat_id");
             $table->string("seat_name");
-            $table->integer('office_id')->constrained('offices');
+            $table->integer("office_id")->constrained('offices');
             $table->unique(['office_id', 'seat_name']); // 同一オフィス内で席コード一意
+
+            $table->integer("x_position")->default(0);
+            $table->integer("y_position")->default(0);
+            $table->integer("width")->default(1);
+            $table->integer("height")->default(1);
         });
     }
 
