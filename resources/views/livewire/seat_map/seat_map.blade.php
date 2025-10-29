@@ -115,8 +115,14 @@ $clearSelectedEmployee = function () {
 
 ?>
 
+@php
+    $office = \App\Models\Office::find($officeId);
+    $gridwidth = $office->layout_width ?? 4;
+    $gridheight = $office->layout_height > 0 ? $office->layout_height : ceil(count($seats) / $gridwidth);
+@endphp
+
 <div class="m-5">
-    <h1 class="text-3xl font-bold text-center">オフィスマップ/座席表</h1>
+    <h1 class="text-3xl font-bold text-center">{{ $office->office_name }}の座席表</h1>
     <div class="flex gap-6" wire:poll.5s="refreshSeats">
         <!-- 左：社員選択 -->
         <div class="w-50 space-y-3 m-5">
