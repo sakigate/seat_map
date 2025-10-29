@@ -8,7 +8,7 @@ class Seat extends Model
 {
     protected $table = 'seats';
     protected $primaryKey = 'seat_id';
-    protected $fillable = ['seat_name', 'office_id', 'x_position', 'y_position', 'width', 'height'];
+    protected $fillable = ['seat_name', 'office_id', 'x_position', 'y_position', 'width', 'height', 'is_layout_element'];
 
     // タイムスタンプを無効にする
     public $timestamps = false;

@@ -28,6 +28,7 @@ $refreshSeats = function () {
             'seats.y_position',
             'seats.width',
             'seats.height',
+            'seats.is_layout_element',
             'e.employee_id as occ_employee_id',
             'e.employee_name as occ_employee_name'
         ])
@@ -186,8 +187,25 @@ $clearSelectedEmployee = function () {
                         $yPosition = $s['y_position'] ?? 0;
                         $width = $s['width'] ?? 1;
                         $height = $s['height'] ?? 1;
+                        $isLayoutElement = $s['is_layout_element'] ?? false;
                     @endphp
 
+                    @if ($isLayoutElement)
+                    <!-- レイアウト要素（クリックできない） -->
+                        <div wire:key="layout-{{ $officeId }}-{{ $s['seat_id'] }}"
+                            class="rounded-lg bg-gray-100 text-gray-800
+                                border-2 border-gray-400
+                                flex flex-col items-center justify-center
+                                absolute
+                                px-2 py-1.5
+                                text-xs sm:text-sm leading-tight
+                                shadow-md"
+                            style="left: {{ $xPosition * 100 }}px; top: {{ $yPosition * 80 }}px; width: {{ $width * 100 - 8 }}px; height: {{ $height * 80 - 8 }}px;">
+                            <div class="font-semibold text-[11px] sm:text-xs">{{ $s['seat_name'] }}</div>
+                            <div class="mt-0.5 text-[10px] sm:text-[11px] opacity-80"></div>
+                        </div>
+                    @else
+                    <!-- 通常の座席（クリック可能） -->
                     <button wire:key="seat-{{ $officeId }}-{{ $s['seat_id'] }}"
                         wire:click="claimSeat({{ $s['seat_id'] }})" @disabled($disabled)
                         class="rounded text-white {{ $bgClass }}
@@ -204,6 +222,7 @@ $clearSelectedEmployee = function () {
                             <div class="mt-0.5 text-[10px] sm:text-[11px] opacity-80">空席</div>
                         @endif
                     </button>
+                    @endif
                 @endforeach
             </div>
         </div>
