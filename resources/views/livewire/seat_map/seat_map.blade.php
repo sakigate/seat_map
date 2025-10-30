@@ -270,7 +270,7 @@ $selectEmployee = function (int $employeeId) {
 
                 <!-- 名簿用の部署フィルター -->
                 <div>
-                    <label for="departmentFilter" class="block text-sm font-medium text-gray-700">部署でフィルター</label>
+                    <label for="departmentFilter" class="block text-sm font-medium text-gray-700">部署を選択</label>
                     <select id="departmentFilter" wire:model="departmentFilter" class="w-full border rounded p-2">
                         <option value="">すべての部署</option>
                         @foreach ($departments as $department)
@@ -327,7 +327,7 @@ $selectEmployee = function (int $employeeId) {
                                         {{ $employee->department->department_name }}</td>
                                     <td class="px-4 py-2 whitespace-nowrap text-sm">
                                         <button wire:click="selectEmployee({{ $employee->employee_id }})"
-                                            class="px-2 py-1 {{ $selectedEmpId == $employee->employee_id ? 'bg-blue-600' : 'bg-blue-500' }} text-white rounded text-xs hover:bg-blue-600">
+                                            class="bg-gray-400 px-2 py-1 {{ $selectedEmpId == $employee->employee_id ? 'bg-gray-600' : 'bg-blue-500' }} text-white rounded text-xs hover:bg-blue-600">
                                             選択
                                         </button>
                                     </td>
