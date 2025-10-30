@@ -189,7 +189,6 @@ $selectEmployee = function (int $employeeId) {
         <!-- 左：オフィス選択のみ -->
         <div class="w-64 space-y-3 m-5">
             <h3 class="font-semibold">オフィス選択</h3>
-
             <div class="mb-3">
                 <label class="block text-sm font-medium text-gray-700 mb-1">表示するオフィス</label>
                 <select wire:model="officeId" wire:change="refreshSeats" class="w-full border rounded p-2">
@@ -198,8 +197,6 @@ $selectEmployee = function (int $employeeId) {
                     @endforeach
                 </select>
             </div>
-
-            <!-- 選択中の社員の表示は不要 -->
         </div>
 
         <!-- 中：座席グリッド -->
