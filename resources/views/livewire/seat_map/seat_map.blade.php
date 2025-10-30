@@ -1,37 +1,37 @@
 <?php
 
-use App\Models\{Office, Seat, CurrentSeat, Employee};
+use App\Models\{Office, Seat, CurrentSeat, Employee, Department};
 use Illuminate\Support\Facades\DB;
-use function Livewire\Volt\{state, mount};
+use function Livewire\Volt\{state, mount, computed};
 
 state([
     'officeId' => null, // 表示中オフィス
     'seats' => [], // オフィス＋座席+現在の着席者
-    'selectedEmpId' => null, // 左で選んだ自分の社員ID
-    'employeeQuery' => '', // 社員検索キーワード
-    'selectedDeptId' => null, // 選択した部署ID
+    'selectedEmpId' => null, // 選択中の社員ID
+    'departments' => [], // 部署一覧
+    'offices' => [], // オフィス一覧
+    'search' => '', // 社員検索キーワード
+    'departmentFilter' => '', // 部署フィルター
+    'currentOffice' => null, // 現在のオフィス
+    'showEmployeeList' => false, // 社員名簿の表示
 ]);
 
 mount(function () {
     $this->officeId = Office::query()->value('office_id');
+    $this->departments = Department::all();
+    $this->offices = Office::orderBy('office_name')->get();
     $this->refreshSeats();
+    $this->updateCurrentOffice();
 });
+
+$updateCurrentOffice = function () {
+    $this->currentOffice = Office::find($this->officeId);
+};
 
 $refreshSeats = function () {
     // seats を土台に current_seats / employees を LEFT JOIN（空席も出す）
     $this->seats = Seat::query()
-        ->select([
-            'seats.seat_id',
-            'seats.seat_name',
-            'seats.office_id',
-            'seats.x_position',
-            'seats.y_position',
-            'seats.width',
-            'seats.height',
-            'seats.is_layout_element',
-            'e.employee_id as occ_employee_id',
-            'e.employee_name as occ_employee_name'
-        ])
+        ->select(['seats.seat_id', 'seats.seat_name', 'seats.office_id', 'seats.x_position', 'seats.y_position', 'seats.width', 'seats.height', 'seats.is_layout_element', 'e.employee_id as occ_employee_id', 'e.employee_name as occ_employee_name'])
         ->leftJoin('current_seats as cs', 'cs.seat_id', '=', 'seats.seat_id')
         ->leftJoin('employees as e', 'e.employee_id', '=', 'cs.employee_id')
         ->leftJoin('offices as o', 'o.office_id', '=', 'cs.office_id')
@@ -39,6 +39,65 @@ $refreshSeats = function () {
         ->orderBy('seats.seat_name')
         ->get()
         ->toArray();
+
+    $this->updateCurrentOffice();
+};
+
+$employees = function () {
+    $query = Employee::query()->with('department');
+    if ($this->search) {
+        $query->where('employee_name', 'like', '%' . $this->search . '%');
+    }
+    if ($this->departmentFilter) {
+        $query->where('department_id', $this->departmentFilter);
+    }
+    return $query->get();
+};
+
+$searchEmployees = function () {
+    $this->showEmployeeList = true;
+};
+
+$clearEmployeeSearch = function () {
+    $this->showEmployeeList = false;
+    $this->search = '';
+    $this->departmentFilter = '';
+};
+
+$getSelectedEmployee = function () {
+    if (!$this->selectedEmpId) {
+        return '（未選択）';
+    }
+
+    $employee = Employee::find($this->selectedEmpId);
+    return $employee ? $employee->employee_name : '（未選択）';
+};
+
+$getEmployeeSeatInfo = function () {
+    if (!$this->selectedEmpId) {
+        return null;
+    }
+
+    // 社員の現在の座席情報を取得
+    $currentSeat = CurrentSeat::query()->where('employee_id', $this->selectedEmpId)->first();
+
+    if (!$currentSeat) {
+        return null;
+    }
+
+    // 座席とオフィス情報を取得
+    $seat = Seat::find($currentSeat->seat_id);
+    $office = Office::find($currentSeat->office_id);
+
+    if (!$seat || !$office) {
+        return null;
+    }
+
+    return [
+        'seat_name' => $seat->seat_name,
+        'office_name' => $office->office_name,
+        'office_id' => $office->office_id,
+    ];
 };
 
 $claimSeat = function (int $seatId) {
@@ -113,72 +172,39 @@ $clearSelectedEmployee = function () {
     $this->selectedEmpId = null;
 };
 
+$selectEmployee = function (int $employeeId) {
+    $this->selectedEmpId = $employeeId;
+};
+
 ?>
 
 @php
-    $office = \App\Models\Office::find($officeId);
-    $gridwidth = $office->layout_width ?? 4;
-    $gridheight = $office->layout_height > 0 ? $office->layout_height : ceil(count($seats) / $gridwidth);
+    $gridwidth = $currentOffice->layout_width ?? 4;
+    $gridheight = $currentOffice->layout_height > 0 ? $currentOffice->layout_height : ceil(count($seats) / $gridwidth);
 @endphp
 
 <div class="m-5">
-    <h1 class="text-3xl font-bold text-center">{{ $office->office_name }}の座席表</h1>
-    <div class="flex gap-6" wire:poll.5s="refreshSeats">
-        <!-- 左：社員選択 -->
-        <div class="w-50 space-y-3 m-5">
-            <h3 class="font-semibold">部署と自分の名前を選択</h3>
+    <h1 class="text-3xl font-bold text-center">座席表・社員検索アプリ</h1>
+    <div class="flex flex-wrap gap-6" wire:poll.5s="refreshSeats">
+        <!-- 左：オフィス選択のみ -->
+        <div class="w-64 space-y-3 m-5">
+            <h3 class="font-semibold">オフィス選択</h3>
 
-            <!-- 部署選択 -->
             <div class="mb-3">
-                <label class="block text-sm font-medium text-gray-700 mb-1">部署</label>
-                <select wire:model="selectedDeptId" class="w-full border rounded p-2">
-                    <option value="">-- 部署を選択 --</option>
-                    @foreach (\App\Models\Department::orderBy('department_name')->get() as $dept)
-                        <option value="{{ $dept->department_id }}">{{ $dept->department_name }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <!-- 社員検索 -->
-            <input type="text" placeholder="氏名で検索" wire:model.debounce.300ms="employeeQuery"
-                class="w-full border rounded p-2" />
-            <!-- 社員名選択 -->
-            <select wire:model="selectedEmpId" class="w-full border rounded p-2">
-                <option value="">-- 名前を選択 --</option>
-                @foreach (\App\Models\Employee::query()->when($selectedDeptId, fn($q) => $q->where('department_id', $selectedDeptId))->when($employeeQuery, fn($q) => $q->where('employee_name', 'like', "%{$employeeQuery}%"))->orderBy('employee_name')->limit(100)->get() as $emp)
-                    <option value="{{ $emp->employee_id }}">{{ $emp->employee_name }}</option>
-                @endforeach
-            </select>
-
-            <div class="text-xs text-gray-600">
-                選択中：
-                <span class="font-medium">
-                    {{ optional(\App\Models\Employee::find($selectedEmpId))->employee_name ?? '（未選択）' }}
-                </span>
-            </div>
-
-            <div class="flex gap-2">
-                <button wire:click="releaseSeat" class="px-3 py-2 bg-gray-200 rounded">退席する</button>
-                <button wire:click="clearSelectedEmployee" class="px-3 py-2 bg-gray-100 rounded">選びなおす</button>
-            </div>
-
-            <div class="mt-4">
-                <h4 class="font-semibold text-sm mb-2">オフィス</h4>
+                <label class="block text-sm font-medium text-gray-700 mb-1">表示するオフィス</label>
                 <select wire:model="officeId" wire:change="refreshSeats" class="w-full border rounded p-2">
-                    @foreach (\App\Models\Office::orderBy('office_name')->get() as $o)
+                    @foreach ($offices as $o)
                         <option value="{{ $o->office_id }}">{{ $o->office_name }}</option>
                     @endforeach
                 </select>
             </div>
+
+            <!-- 選択中の社員の表示は不要 -->
         </div>
 
         <!-- 中：座席グリッド -->
         <div class="border rounded p-3 sm:p-4 m-5">
-            @php
-                $office = \App\Models\Office::find($officeId);
-                $gridwidth = $office->layout_width ?? 4;
-                $gridheight = $office->layout_height > 0 ? $office->layout_height : ceil(count($seats) / $gridwidth);
-            @endphp
+            <h1 class="text-3xl font-bold text-center">{{ $currentOffice->office_name }}の座席表</h1>
 
             <div class="relative" style="width: {{ $gridwidth * 100 }}px; height: {{ $gridheight * 80 }}px;">
                 @foreach ($seats as $s)
@@ -197,7 +223,7 @@ $clearSelectedEmployee = function () {
                     @endphp
 
                     @if ($isLayoutElement)
-                    <!-- レイアウト要素（クリックできない） -->
+                        <!-- レイアウト要素（クリックできない） -->
                         <div wire:key="layout-{{ $officeId }}-{{ $s['seat_id'] }}"
                             class="rounded-lg bg-gray-100 text-gray-800
                                 border-2 border-gray-400
@@ -211,25 +237,150 @@ $clearSelectedEmployee = function () {
                             <div class="mt-0.5 text-[10px] sm:text-[11px] opacity-80"></div>
                         </div>
                     @else
-                    <!-- 通常の座席（クリック可能） -->
-                    <button wire:key="seat-{{ $officeId }}-{{ $s['seat_id'] }}"
-                        wire:click="claimSeat({{ $s['seat_id'] }})" @disabled($disabled)
-                        class="rounded text-white {{ $bgClass }}
+                        <!-- 通常の座席（クリック可能） -->
+                        <button wire:key="seat-{{ $officeId }}-{{ $s['seat_id'] }}"
+                            wire:click="claimSeat({{ $s['seat_id'] }})" @disabled($disabled)
+                            class="rounded text-white {{ $bgClass }}
                             flex flex-col items-center justify-center
                             absolute
                             px-2 py-1.5
                             text-xs sm:text-sm leading-tight"
-                        style="left: {{ $xPosition * 100 }}px; top: {{ $yPosition * 80 }}px; width: {{ $width * 100 - 8 }}px; height: {{ $height * 80 - 8 }}px;"
-                        title="{{ $occId ? '使用中: ' . ($occName ?? '') : '空席' }}">
-                        <div class="font-semibold text-[11px] sm:text-xs">{{ $s['seat_name'] }}</div>
-                        @if ($occId)
-                            <div class="mt-0.5 text-[10px] sm:text-[11px] truncate w-full">{{ $occName }}</div>
-                        @else
-                            <div class="mt-0.5 text-[10px] sm:text-[11px] opacity-80">空席</div>
-                        @endif
-                    </button>
+                            style="left: {{ $xPosition * 100 }}px; top: {{ $yPosition * 80 }}px; width: {{ $width * 100 - 8 }}px; height: {{ $height * 80 - 8 }}px;"
+                            title="{{ $occId ? '使用中: ' . ($occName ?? '') : '空席' }}">
+                            <div class="font-semibold text-[11px] sm:text-xs">{{ $s['seat_name'] }}</div>
+                            @if ($occId)
+                                <div class="mt-0.5 text-[10px] sm:text-[11px] truncate w-full">{{ $occName }}
+                                </div>
+                            @else
+                                <div class="mt-0.5 text-[10px] sm:text-[11px] opacity-80">空席</div>
+                            @endif
+                        </button>
                     @endif
                 @endforeach
+            </div>
+        </div>
+
+        <!-- 右：社員名簿（拡張版） -->
+        <div class="border rounded p-3 sm:p-4 m-5 w-96">
+            <h1 class="text-2xl font-bold text-center mb-4">社員名簿</h1>
+
+            <div class="mb-4 space-y-3">
+                <div>
+                    <label for="search" class="block text-sm font-medium text-gray-700">社員を検索</label>
+                    <input type="text" wire:model="search" id="search" class="w-full border rounded p-2"
+                        placeholder="名前で検索...">
+                </div>
+
+                <!-- 名簿用の部署フィルター -->
+                <div>
+                    <label for="departmentFilter" class="block text-sm font-medium text-gray-700">部署でフィルター</label>
+                    <select id="departmentFilter" wire:model="departmentFilter" class="w-full border rounded p-2">
+                        <option value="">すべての部署</option>
+                        @foreach ($departments as $department)
+                            <option value="{{ $department->department_id }}">{{ $department->department_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- 検索ボタン -->
+                <div class="w-full flex justify-center gap-2">
+                    <button wire:click="searchEmployees"
+                        class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-blue-600">
+                        検索
+                    </button>
+                    <button wire:click="clearEmployeeSearch"
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
+                        クリア
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto overflow-y-auto max-h-96">
+                @if ($showEmployeeList)
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th
+                                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    社員名</th>
+                                <th
+                                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    部署</th>
+                                <th
+                                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @php
+                                $deptEmployees = \App\Models\Employee::query()
+                                    ->with('department')
+                                    ->when($departmentFilter, fn($q) => $q->where('department_id', $departmentFilter))
+                                    ->when($search, fn($q) => $q->where('employee_name', 'like', "%{$search}%"))
+                                    ->orderBy('employee_name')
+                                    ->get();
+                            @endphp
+
+                            @foreach ($deptEmployees as $employee)
+                                <tr class="{{ $selectedEmpId == $employee->employee_id ? 'bg-blue-50' : '' }}">
+                                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                                        {{ $employee->employee_name }}</td>
+                                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                                        {{ $employee->department->department_name }}</td>
+                                    <td class="px-4 py-2 whitespace-nowrap text-sm">
+                                        <button wire:click="selectEmployee({{ $employee->employee_id }})"
+                                            class="px-2 py-1 {{ $selectedEmpId == $employee->employee_id ? 'bg-blue-600' : 'bg-blue-500' }} text-white rounded text-xs hover:bg-blue-600">
+                                            選択
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                @if ($selectedEmpId == $employee->employee_id)
+                                    <tr class="bg-blue-50">
+                                        <td colspan="3" class="px-4 py-2">
+                                            <div class="flex flex-col space-y-2">
+                                                @php
+                                                    $seatInfo = $this->getEmployeeSeatInfo();
+                                                @endphp
+
+                                                @if ($seatInfo)
+                                                    <div class="text-xs text-gray-700">
+                                                        <span class="font-medium">着席中:</span>
+                                                        {{ $seatInfo['office_name'] }} - {{ $seatInfo['seat_name'] }}
+                                                    </div>
+                                                @endif
+
+                                                <div class="flex gap-2 mt-1">
+                                                    <button wire:click="releaseSeat"
+                                                        class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200">
+                                                        退席する
+                                                    </button>
+                                                    <button wire:click="clearSelectedEmployee"
+                                                        class="px-2 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200">
+                                                        選択解除
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endif
+                            @endforeach
+
+                            @if (count($deptEmployees) === 0)
+                                <tr>
+                                    <td colspan="3"
+                                        class="px-4 py-2 whitespace-nowrap text-sm text-gray-500 text-center">
+                                        該当する社員が見つかりません</td>
+                                </tr>
+                            @endif
+                        </tbody>
+                    </table>
+                @else
+                    <div class="text-center py-8 text-gray-500">
+                        「検索」ボタンをクリックしてください
+                    </div>
+                @endif
             </div>
         </div>
     </div>

@@ -9,3 +9,6 @@ Route::get('/', function () {
 
 
 Volt::route('/seat_map', 'seat_map.seat_map')->name('seats.index');
+
+//Volt::route('/employee-list', 'employee-list.employee-list')
+//    ->name('employee.list');
