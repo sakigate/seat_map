@@ -184,7 +184,7 @@ $selectEmployee = function (int $employeeId) {
 @endphp
 <div class="bg-[#00ced1]/30 p-4 rounded-lg">
     <h1 class="text-center m-5">
-        <span class="bg-[#00ced1] text-5xl text-[#2f4f4f] font-bold p-2 rounded-lg">　あの人どこ？オフィスマップ　</span>
+        <span class="bg-[#20b2aa]/50 text-5xl text-[#2f4f4f] font-bold p-2 rounded-lg">　あの人どこ？オフィスマップ　</span>
     </h1>
     <div class="m-5 w-full" wire:poll.5s="refreshSeats">
         <div class="flex justify-center w-full m-5">
@@ -268,7 +268,7 @@ $selectEmployee = function (int $employeeId) {
                                     @endphp
     
                                     @foreach ($deptEmployees as $employee)
-                                        <tr class="{{ $selectedEmpId == $employee->employee_id ? 'bg-blue-50' : '' }}">
+                                        <tr class="{{ $selectedEmpId == $employee->employee_id ? 'bg-[#20b2aa]/10' : '' }}">
                                             <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                                                 {{ $employee->employee_name }}</td>
                                             <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
@@ -282,7 +282,7 @@ $selectEmployee = function (int $employeeId) {
                                         </tr>
     
                                         @if ($selectedEmpId == $employee->employee_id)
-                                            <tr class="bg-blue-50">
+                                            <tr class="bg-[#20b2aa]/10">
                                                 <td colspan="3" class="px-4 py-2">
                                                     <div class="flex flex-col space-y-2">
                                                         @php
@@ -299,11 +299,11 @@ $selectEmployee = function (int $employeeId) {
     
                                                         <div class="flex gap-2 mt-1">
                                                             <button wire:click="releaseSeat"
-                                                                class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200">
+                                                                class="px-2 py-1 bg-gray-200 rounded text-xs hover:bg-gray-400">
                                                                 退席する
                                                             </button>
                                                             <button wire:click="clearSelectedEmployee"
-                                                                class="px-2 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200">
+                                                                class="px-2 py-1 bg-gray-200 rounded text-xs hover:bg-gray-400">
                                                                 選択解除
                                                             </button>
                                                         </div>
