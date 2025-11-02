@@ -14,6 +14,9 @@ state([
     'departmentFilter' => '', // 部署フィルター
     'currentOffice' => null, // 現在のオフィス
     'showEmployeeList' => false, // 社員名簿の表示
+    'showPopup' => false, // ポップアップ表示フラグ
+    'popupMessage' => '', // ポップアップメッセージ
+    'popupType' => 'info', // ポップアップタイプ (info, success, error)
 ]);
 
 mount(function () {
@@ -54,6 +57,18 @@ $employees = function () {
     return $query->get();
 };
 
+$deptEmployees = computed(function () {
+    return Employee::query()
+        ->with('department')
+        ->when(
+            $this->departmentFilter,
+            fn($q) => $q->where('department_id', $this->departmentFilter),
+        )
+        ->when($this->search, fn($q) => $q->where('employee_name', 'like', "%{$this->search}%"))
+        ->orderBy('employee_name')
+        ->get();
+});
+
 $searchEmployees = function () {
     $this->showEmployeeList = true;
 };
@@ -62,15 +77,6 @@ $clearEmployeeSearch = function () {
     $this->showEmployeeList = false;
     $this->search = '';
     $this->departmentFilter = '';
-};
-
-$getSelectedEmployee = function () {
-    if (!$this->selectedEmpId) {
-        return '（未選択）';
-    }
-
-    $employee = Employee::find($this->selectedEmpId);
-    return $employee ? $employee->employee_name : '（未選択）';
 };
 
 $getEmployeeSeatInfo = function () {
@@ -142,6 +148,11 @@ $claimSeat = function (int $seatId) {
             }
         }
         unset($seat);
+
+        //ポップアップ表示
+        $this->showPopup = true;
+        $this->popupMessage = 'おはようございます😊今日も一日頑張りましょう！';
+        $this->popupType = 'success';
     } catch (\Throwable $e) {
     }
 
@@ -168,6 +179,12 @@ $releaseSeat = function () {
     $this->refreshSeats();
 };
 
+//ポップアップを閉じる関数
+$closePopup = function () {
+    $this->showPopup = false;
+    $this->popupMessage = '';
+};
+
 $clearSelectedEmployee = function () {
     $this->selectedEmpId = null;
 };
@@ -183,6 +200,33 @@ $selectEmployee = function (int $employeeId) {
     $gridheight = $currentOffice->layout_height > 0 ? $currentOffice->layout_height : ceil(count($seats) / $gridwidth);
 @endphp
 <div class="bg-[#00ced1]/30 p-4 rounded-lg">
+    <!-- ポップアップ -->
+    @if ($showPopup)
+        <div class="absolute z-50" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+            <div class="bg-white rounded-lg shadow-xl p-4 max-w-md w-full border-2 {{ $popupType === 'error' ? 'border-red-400' : ($popupType === 'success' ? 'border-green-400' : 'border-blue-400') }}">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-medium {{ $popupType === 'error' ? 'text-red-600' : ($popupType === 'success' ? 'text-green-600' : 'text-blue-600') }}">
+                        {{ $popupType === 'error' ? 'エラー' : ($popupType === 'success' ? '出勤' : 'お知らせ') }}
+                    </h3>
+                    <button wire:click="closePopup" class="text-gray-400 hover:text-gray-600">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="mb-3">
+                    <p class="text-gray-700">{{ $popupMessage }}</p>
+                </div>
+                <div class="flex justify-end">
+                    <button wire:click="closePopup" class="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm">
+                        閉じる
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+
     <h1 class="text-center m-5">
         <span class="bg-[#20b2aa]/50 text-5xl text-[#2f4f4f] font-bold p-2 rounded-lg">　あの人どこ？オフィスマップ　</span>
     </h1>
@@ -205,21 +249,23 @@ $selectEmployee = function (int $employeeId) {
                 <h2 class="text-2xl font-bold text-center mb-4 text-[#2f4f4f]">社員名簿</h2>
                 <div class="border border-gray-200 rounded relative overflow-y-auto frex">
                     <div class="p-3 sm:p-4">
-    
+
                         <div class="mb-4 space-y-3">
                             <div>
                                 <label for="search" class="block text-sm font-medium text-gray-700">社員を検索</label>
-                                <input type="text" wire:model="search" id="search" class="w-full border rounded p-2"
-                                    placeholder="名前で検索...">
+                                <input type="text" wire:model="search" id="search"
+                                    class="w-full border rounded p-2" placeholder="名前で検索...">
                             </div>
                             <!-- 名簿用の部署フィルター -->
                             <div>
-                                <label for="departmentFilter" class="block text-sm font-medium text-gray-700">部署を選択</label>
+                                <label for="departmentFilter"
+                                    class="block text-sm font-medium text-gray-700">部署を選択</label>
                                 <select id="departmentFilter" wire:model="departmentFilter"
                                     class="w-full border rounded p-2">
                                     <option value="">すべての部署</option>
                                     @foreach ($departments as $department)
-                                        <option value="{{ $department->department_id }}">{{ $department->department_name }}
+                                        <option value="{{ $department->department_id }}">
+                                            {{ $department->department_name }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -255,22 +301,17 @@ $selectEmployee = function (int $employeeId) {
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
-                                    @php
-                                        $deptEmployees = \App\Models\Employee::query()
-                                            ->with('department')
-                                            ->when(
-                                                $departmentFilter,
-                                                fn($q) => $q->where('department_id', $departmentFilter),
-                                            )
-                                            ->when($search, fn($q) => $q->where('employee_name', 'like', "%{$search}%"))
-                                            ->orderBy('employee_name')
-                                            ->get();
-                                    @endphp
-    
-                                    @foreach ($deptEmployees as $employee)
-                                        <tr class="{{ $selectedEmpId == $employee->employee_id ? 'bg-[#20b2aa]/10' : '' }}">
+                                    @foreach ($this->deptEmployees as $employee)
+                                        <tr
+                                            class="{{ $selectedEmpId == $employee->employee_id ? 'bg-[#20b2aa]/10' : '' }}">
                                             <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                                                {{ $employee->employee_name }}</td>
+                                                <div class="flex items-center">
+                                                    <div class="h-8 w-8 rounded-full bg-[#008080] flex items-center justify-center text-white font-bold mr-2">
+                                                        {{ mb_substr($employee->employee_name, 0, 1) }}
+                                                    </div>
+                                                    {{ $employee->employee_name }}
+                                                </div>
+                                            </td>
                                             <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                                                 {{ $employee->department->department_name }}</td>
                                             <td class="px-4 py-2 whitespace-nowrap text-sm">
@@ -280,7 +321,7 @@ $selectEmployee = function (int $employeeId) {
                                                 </button>
                                             </td>
                                         </tr>
-    
+
                                         @if ($selectedEmpId == $employee->employee_id)
                                             <tr class="bg-[#20b2aa]/10">
                                                 <td colspan="3" class="px-4 py-2">
@@ -288,7 +329,7 @@ $selectEmployee = function (int $employeeId) {
                                                         @php
                                                             $seatInfo = $this->getEmployeeSeatInfo();
                                                         @endphp
-    
+
                                                         @if ($seatInfo)
                                                             <div class="text-xs text-gray-700">
                                                                 <span class="font-medium">着席中:</span>
@@ -296,7 +337,7 @@ $selectEmployee = function (int $employeeId) {
                                                                 {{ $seatInfo['seat_name'] }}
                                                             </div>
                                                         @endif
-    
+
                                                         <div class="flex gap-2 mt-1">
                                                             <button wire:click="releaseSeat"
                                                                 class="px-2 py-1 bg-gray-200 rounded text-xs hover:bg-gray-400">
@@ -312,8 +353,8 @@ $selectEmployee = function (int $employeeId) {
                                             </tr>
                                         @endif
                                     @endforeach
-    
-                                    @if (count($deptEmployees) === 0)
+
+                                    @if (count($this->deptEmployees) === 0)
                                         <tr>
                                             <td colspan="3"
                                                 class="px-4 py-2 whitespace-nowrap text-sm text-gray-500 text-center">
@@ -372,18 +413,20 @@ $selectEmployee = function (int $employeeId) {
                                 class="rounded text-white {{ $bgClass }}
                                     flex flex-col items-center justify-center
                                     absolute
-                                    px-2 py-1.5
-                                    text-xs sm:text-sm leading-tight"
+                                    px-2 py-1.5"
                                 style="left: {{ $xPosition * 100 }}px; top: {{ $yPosition * 80 }}px; width: {{ $width * 100 - 8 }}px; height: {{ $height * 80 - 8 }}px;"
                                 title="{{ $occId ? '使用中: ' . ($occName ?? '') : '空席' }}">
-                                <div class="font-semibold text-[11px] sm:text-xs">{{ $s['seat_name'] }}
-                                </div>
                                 @if ($occId)
-                                    <div class="mt-0.5 text-[14px] sm:text-[14px] truncate w-full">{{ $occName }}
+                                    <div class="mt-0.5 flex flex-col items-center">
+                                        <div class="h-10 w-10 rounded-full bg-[#008080] flex items-center justify-center text-white font-bold text-[16px] mb-1">
+                                            {{ mb_substr($occName, 0, 1) }}
+                                        </div>
+                                        <div class="text-[12px] truncate w-full text-center">{{ $occName }}</div>
                                     </div>
                                 @else
-                                    <div class="mt-0.5 text-[10px] sm:text-[11px] opacity-80">空席
+                                    <div class="font-semibold text-[11px] sm:text-xs">{{ $s['seat_name'] }}
                                     </div>
+                                    <div class="mt-0.5 text-[10px] sm:text-[11px] opacity-80">空席</div>
                                 @endif
                             </button>
                         @endif
