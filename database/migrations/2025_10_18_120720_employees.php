@@ -15,7 +15,6 @@ return new class extends Migration
             $table->increments("employee_id");
             $table->string("employee_name");
             $table->integer('department_id')->constrained('departments');
-
         });
     }
     /**
