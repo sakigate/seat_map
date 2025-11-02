@@ -58,15 +58,7 @@ $employees = function () {
 };
 
 $deptEmployees = computed(function () {
-    return Employee::query()
-        ->with('department')
-        ->when(
-            $this->departmentFilter,
-            fn($q) => $q->where('department_id', $this->departmentFilter),
-        )
-        ->when($this->search, fn($q) => $q->where('employee_name', 'like', "%{$this->search}%"))
-        ->orderBy('employee_name')
-        ->get();
+    return Employee::query()->with('department')->when($this->departmentFilter, fn($q) => $q->where('department_id', $this->departmentFilter))->when($this->search, fn($q) => $q->where('employee_name', 'like', "%{$this->search}%"))->orderBy('employee_name')->get();
 });
 
 $searchEmployees = function () {
@@ -199,33 +191,37 @@ $selectEmployee = function (int $employeeId) {
     $gridwidth = $currentOffice->layout_width ?? 4;
     $gridheight = $currentOffice->layout_height > 0 ? $currentOffice->layout_height : ceil(count($seats) / $gridwidth);
 @endphp
-<div class="bg-[#00ced1]/30 p-4 rounded-lg">
+<div class="bg-[#00ced1]/30 p-4 rounded-lg relative">
     <!-- ポップアップ -->
     @if ($showPopup)
         <div class="absolute z-50" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
-            <div class="bg-white rounded-lg shadow-xl p-4 max-w-md w-full border-2 {{ $popupType === 'error' ? 'border-red-400' : ($popupType === 'success' ? 'border-green-400' : 'border-blue-400') }}">
+            <div
+                class="bg-white rounded-lg shadow-xl p-4 max-w-md w-full border-2 {{ $popupType === 'error' ? 'border-red-400' : ($popupType === 'success' ? 'border-green-400' : 'border-blue-400') }}">
                 <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-lg font-medium {{ $popupType === 'error' ? 'text-red-600' : ($popupType === 'success' ? 'text-green-600' : 'text-blue-600') }}">
-                        {{ $popupType === 'error' ? 'エラー' : ($popupType === 'success' ? '出勤' : 'お知らせ') }}
+                    <h3
+                        class="text-lg font-medium {{ $popupType === 'error' ? 'text-red-600' : ($popupType === 'success' ? 'text-green-600' : 'text-blue-600') }}">
+                        {{ $popupType === 'error' ? 'エラー' : ($popupType === 'success' ? '出勤' : 'お知らせ') }}<br>
                     </h3>
                     <button wire:click="closePopup" class="text-gray-400 hover:text-gray-600">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 flex items-center animate-bounce">
+                    <img src="/images/image.png" alt="ポップアップ画像" class="h-16 w-16 mr-3">
                     <p class="text-gray-700">{{ $popupMessage }}</p>
                 </div>
                 <div class="flex justify-end">
-                    <button wire:click="closePopup" class="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm">
+                    <button wire:click="closePopup"
+                        class="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm">
                         閉じる
                     </button>
                 </div>
             </div>
         </div>
     @endif
-
 
     <h1 class="text-center m-5">
         <span class="bg-[#20b2aa]/50 text-5xl text-[#2f4f4f] font-bold p-2 rounded-lg">　あの人どこ？オフィスマップ　</span>
@@ -306,7 +302,8 @@ $selectEmployee = function (int $employeeId) {
                                             class="{{ $selectedEmpId == $employee->employee_id ? 'bg-[#20b2aa]/10' : '' }}">
                                             <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                                                 <div class="flex items-center">
-                                                    <div class="h-8 w-8 rounded-full bg-[#008080] flex items-center justify-center text-white font-bold mr-2">
+                                                    <div
+                                                        class="h-8 w-8 rounded-full bg-[#008080] flex items-center justify-center text-white font-bold mr-2">
                                                         {{ mb_substr($employee->employee_name, 0, 1) }}
                                                     </div>
                                                     {{ $employee->employee_name }}
@@ -374,7 +371,6 @@ $selectEmployee = function (int $employeeId) {
             <!-- 右：座席表 -->
             <div class="frex-1 overflow-x-auto border border-gray-200 rounded-lg p-3 m-5 bg-gray-50 shadow-sm">
                 <h2 class="text-[#2f4f4f] text-center text-3xl font-bold">{{ $currentOffice->office_name }}の座席表</h2>
-
                 <div class="m-5 relative"
                     style="width: {{ $gridwidth * 100 }}px; height: {{ $gridheight * 80 }}px; transform-origin: top left;">
                     @foreach ($seats as $s)
@@ -418,7 +414,8 @@ $selectEmployee = function (int $employeeId) {
                                 title="{{ $occId ? '使用中: ' . ($occName ?? '') : '空席' }}">
                                 @if ($occId)
                                     <div class="mt-0.5 flex flex-col items-center">
-                                        <div class="h-10 w-10 rounded-full bg-[#008080] flex items-center justify-center text-white font-bold text-[16px] mb-1">
+                                        <div
+                                            class="rounded-full h-10 w-10 bg-[#008080] flex items-center justify-center text-white font-bold text-[16px] mb-1">
                                             {{ mb_substr($occName, 0, 1) }}
                                         </div>
                                         <div class="text-[12px] truncate w-full text-center">{{ $occName }}</div>
