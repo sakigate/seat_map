@@ -20,5 +20,5 @@ npm run build
 echo "Publishing Livewire assets..."
 php artisan livewire:publish --assets
 
-echo "Running migrations..."
-php artisan migrate --seed
+echo "Running migrations with seeds..."
+php artisan migrate:fresh --seed --force
