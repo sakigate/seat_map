@@ -23,5 +23,8 @@ RUN apk update
 # Install the `npm` package
 RUN apk add --no-cache npm
 
+# PostgreSQLドライバーのインストール
+RUN apk add --no-cache libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql
 
 CMD ["/start.sh"]
