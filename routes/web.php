@@ -9,7 +9,7 @@ use Livewire\Volt\Volt;
 
 
 Volt::route('/seat_map', 'seat_map.seat_map')->name('seats.index');
-Volt::route('/', 'seat_map.seat_map')->name('seats.index');
+Volt::route('/', 'seat_map.seat_map')->name('home');
 
 //Volt::route('/employee-list', 'employee-list.employee-list')
 //    ->name('employee.list');
