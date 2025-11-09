@@ -189,7 +189,7 @@ $selectEmployee = function (int $employeeId) {
 
 @php
     $gridwidth = $currentOffice->layout_width ?? 4;
-    $gridheight = $currentOffice->layout_height > 0 ? $currentOffice->layout_height : ceil(count($seats) / $gridwidth);
+    $gridheight = $currentOffice && $currentOffice->layout_height > 0 ? $currentOffice->layout_height : ceil(count($seats) / $gridwidth);
 @endphp
 <div class="bg-[#00ced1]/30 p-4 rounded-lg relative">
     <!-- ポップアップ -->
@@ -370,7 +370,7 @@ $selectEmployee = function (int $employeeId) {
             </div>
             <!-- 右：座席表 -->
             <div class="frex-1 overflow-x-auto border border-gray-200 rounded-lg p-3 m-5 bg-gray-50 shadow-sm">
-                <h2 class="text-[#2f4f4f] text-center text-3xl font-bold">{{ $currentOffice->office_name }}の座席表</h2>
+                <h2 class="text-[#2f4f4f] text-center text-3xl font-bold">{{ $currentOffice ? $currentOffice->office_name : 'オフィス' }}の座席表</h2>
                 <div class="m-5 relative"
                     style="width: {{ $gridwidth * 100 }}px; height: {{ $gridheight * 80 }}px; transform-origin: top left;">
                     @foreach ($seats as $s)
