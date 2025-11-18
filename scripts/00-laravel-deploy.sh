@@ -15,7 +15,7 @@ echo "Publishing Livewire assets..."
 php artisan livewire:publish --assets
 
 echo "Running migrations..."
-php artisan migrate --force --seed
+php artisan migrate:fresh --force --seed
 
 echo "Installing frontend dependencies..."
 npm install
