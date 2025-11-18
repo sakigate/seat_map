@@ -23,7 +23,7 @@ class EmployeeSeeder extends Seeder
         $faker = Faker::create('ja_JP');
 
         $rows = [];
-        for ($i = 0; $i < 20; $i++) {
+        for ($i = 0; $i < 100; $i++) {
             $rows[] = [
                 'employee_name' => $faker->name(),                                  // 例: "山田 太郎"
                 'department_id' => $departmentIds[array_rand($departmentIds)],     // ランダム割当（人数は自然にバラつく）
