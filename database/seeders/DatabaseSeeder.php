@@ -14,14 +14,21 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // User::factory(10)->create();
-        if (config('app.env') == 'local') {
-            $this->call([
-                OfficeSeeder::class,
-                DepartmentSeeder::class,
-                EmployeeSeeder::class,
-                SeatSeeder::class,
-            ]);
-        }
+        $this->call([
+            OfficeSeeder::class,
+            DepartmentSeeder::class,
+            EmployeeSeeder::class,
+            SeatSeeder::class,
+        ]);
+
+        //if (config('app.env') == 'local') {
+        //    $this->call([
+        //        OfficeSeeder::class,
+        //        DepartmentSeeder::class,
+        //        EmployeeSeeder::class,
+        //        SeatSeeder::class,
+        //    ]);
+        //}
         //User::factory()->create([
         //    'name' => 'Test User',
         //    'email' => 'test@example.com',
